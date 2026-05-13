@@ -14,7 +14,11 @@ export default function SocketProvider({ children }: { children: React.ReactNode
     if (isAuthenticated && user) {
       if (!socket) {
         const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3031";
-        socket = io(socketUrl);
+        socket = io(socketUrl, {
+          extraHeaders: {
+            "Bypass-Tunnel-Reminder": "true"
+          }
+        });
       }
 
       socket.on("connect", () => {

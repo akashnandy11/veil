@@ -54,11 +54,17 @@ function MatchCard({ match, onSwipe }: { match: Match; onSwipe: (dir: "left" | "
       whileTap={{ cursor: "grabbing" }}
     >
       <div className="glass neon-border" style={{ borderRadius: 24, padding: "1.5rem", position: "relative", overflow: "hidden" }}>
-        {/* Match % badge */}
-        <div style={{ position: "absolute", top: 16, right: 16 }}>
+        {/* Match % badge + LIVE badge */}
+        <div style={{ position: "absolute", top: 16, right: 16, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
           <div style={{ background: `${match.color}22`, border: `1px solid ${match.color}55`, borderRadius: 999, padding: "4px 10px", fontSize: "0.75rem", fontWeight: 700, color: match.color }}>
             {match.matchScore}% match
           </div>
+          {match.matchScore === 99 && (
+            <div style={{ background: "rgba(16,185,129,0.2)", border: "1px solid #10b981", borderRadius: 999, padding: "2px 8px", fontSize: "0.65rem", fontWeight: 700, color: "#10b981", display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", display: "inline-block", animation: "pulse 1.5s infinite" }} />
+              LIVE
+            </div>
+          )}
         </div>
 
         {/* Like/Nope overlays */}
@@ -131,20 +137,31 @@ export default function DiscoverPage() {
     if (!isAuthenticated) router.push("/");
   }, [isAuthenticated, router]);
 
-  // Filter online users (convert User to Match interface format for UI)
-  const matches = onlineUsers.map(u => ({
-    id: u.id,
-    username: u.isAnonymous ? u.username : (u.realName || u.username),
-    emoji: u.isAnonymous ? u.emoji : undefined,
-    avatarUrl: !u.isAnonymous ? u.avatarUrl : undefined,
-    color: u.color,
-    interests: u.interests,
-    mood: u.mood,
-    bio: "Just chilling here.", // real users would have bios
-    isOnline: u.isOnline,
-    distance: "Nearby",
-    matchScore: 90
-  }));
+  // Seed users always visible (generated once per session on the client)
+  const [seedMatches] = useState<Match[]>(() => generateMatches());
+
+  // Real socket users mapped to Match shape
+  const liveMatches: Match[] = onlineUsers
+    .filter(u => u.id !== user?.id) // exclude self
+    .map(u => ({
+      id: u.id,
+      username: u.isAnonymous ? u.username : (u.realName || u.username),
+      emoji: u.emoji,
+      avatarUrl: !u.isAnonymous ? u.avatarUrl : undefined,
+      color: u.color,
+      interests: u.interests,
+      mood: u.mood,
+      bio: "🟢 Online right now — real person!",
+      isOnline: true,
+      distance: "On campus",
+      matchScore: 99,
+    }));
+
+  // Merge: real users on top, seed users fill the deck
+  const matches: Match[] = [
+    ...liveMatches,
+    ...seedMatches.filter(s => !liveMatches.find(l => l.id === s.id)),
+  ].filter(m => filterMood === "all" || m.mood === filterMood);
 
   const handleSwipe = (dir: "left" | "right", id: string) => {
     if (dir === "right") {
@@ -154,12 +171,13 @@ export default function DiscoverPage() {
     setCurrentIdx(i => i + 1);
   };
 
+  const [deckKey, setDeckKey] = useState(0);
   const resetDeck = () => {
     setCurrentIdx(0);
+    setDeckKey(k => k + 1);
   };
 
   const currentMatch = matches[currentIdx];
-  const nearbyUsers = matches.slice(0, 8);
 
   return (
     <main style={{ minHeight: "100vh", paddingBottom: 80, maxWidth: 480, margin: "0 auto" }}>
@@ -270,8 +288,11 @@ export default function DiscoverPage() {
       {/* Nearby Tab */}
       {activeTab === "nearby" && (
         <div style={{ padding: "0 1.25rem" }}>
+          {matches.slice(0, 8).length === 0 ? (
+            <p style={{ textAlign: "center", color: "var(--text3)", padding: "2rem 0" }}>No users nearby right now</p>
+          ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {nearbyUsers.map((m, i) => (
+            {matches.slice(0, 8).map((m, i) => (
               <motion.div key={m.id} className="glass card-hover" style={{ borderRadius: 16, padding: "1rem", textAlign: "center" }}
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
                 {m.avatarUrl ? (
@@ -280,15 +301,17 @@ export default function DiscoverPage() {
                   <div style={{ fontSize: "2rem", marginBottom: 8, filter: `drop-shadow(0 0 10px ${m.color}80)` }}>{m.emoji}</div>
                 )}
                 <p style={{ fontWeight: 600, fontSize: "0.8rem", color: m.color, marginBottom: 2 }}>{m.username.split("#")[0]}</p>
-                <p style={{ fontSize: "0.65rem", color: "var(--text3)", marginBottom: 8 }}>📍 {m.distance}</p>
-                {m.isOnline && <span className="pulse-dot" style={{ display: "inline-block" }} />}
+                <p style={{ fontSize: "0.65rem", color: "var(--text3)", marginBottom: 4 }}>📍 {m.distance}</p>
+                {m.isOnline && <span className="pulse-dot" style={{ display: "inline-block", marginBottom: 4 }} />}
+                {m.matchScore === 99 && <p style={{ fontSize: "0.6rem", color: "#10b981", marginBottom: 4, fontWeight: 700 }}>🟢 LIVE</p>}
                 <button onClick={() => router.push(`/chat/${m.id}`)} className="btn-ghost"
-                  style={{ width: "100%", marginTop: 10, padding: "0.4rem", fontSize: "0.75rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  style={{ width: "100%", marginTop: 6, padding: "0.4rem", fontSize: "0.75rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                   <MessageCircle size={12} /> Chat
                 </button>
               </motion.div>
             ))}
           </div>
+          )}
         </div>
       )}
 

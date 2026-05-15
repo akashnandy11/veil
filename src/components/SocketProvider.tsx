@@ -8,7 +8,7 @@ let socket: Socket | null = null;
 export const getSocket = () => socket;
 
 export default function SocketProvider({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, setOnlineUsers, addMessage } = useAppStore();
+  const { user, isAuthenticated, setOnlineCount, addMessage, setCurrentSession } = useAppStore();
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -26,16 +26,21 @@ export default function SocketProvider({ children }: { children: React.ReactNode
         socket?.emit("register", user);
       });
 
-      socket.on("users_update", (users) => {
-        // Filter out self
-        const others = users.filter((u: any) => u.id !== user.id);
-        setOnlineUsers(others);
+      socket.on("users_update", (count) => {
+        setOnlineCount(count);
+      });
+
+      socket.on("chat_started", ({ partner, roomId }) => {
+        setCurrentSession({ partner, roomId });
+      });
+
+      socket.on("partner_disconnected", () => {
+        setCurrentSession(null);
       });
 
       socket.on("receive_message", (msg) => {
-        // Find who sent it to organize the chat
-        const chatId = msg.senderId === user.id ? msg.toId : msg.senderId;
-        addMessage(chatId, msg);
+        // Chat room doesn't use the array of objects anymore, but for now just use activeChat or 'current'
+        addMessage('current', msg);
       });
 
       return () => {
@@ -43,7 +48,7 @@ export default function SocketProvider({ children }: { children: React.ReactNode
         socket = null;
       };
     }
-  }, [isAuthenticated, user, setOnlineUsers, addMessage]);
+  }, [isAuthenticated, user, setOnlineCount, addMessage, setCurrentSession]);
 
   return <>{children}</>;
 }

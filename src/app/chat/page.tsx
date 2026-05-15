@@ -16,12 +16,12 @@ export default function ChatInboxPage() {
   // Find users we have a chat history with
   const chatUserIds = Object.keys(messages);
   const recentChats = chatUserIds.map(id => {
-    const user = onlineUsers.find(u => u.id === id);
+    const chatUser = onlineUsers.find(u => u.id === id);
     const msgs = messages[id];
     const lastMsg = msgs[msgs.length - 1];
     return {
       partnerId: id,
-      user,
+      user: chatUser,
       lastMsg
     };
   }).sort((a, b) => new Date(b.lastMsg.timestamp).getTime() - new Date(a.lastMsg.timestamp).getTime());
@@ -42,27 +42,27 @@ export default function ChatInboxPage() {
         {recentChats.length === 0 ? (
           <div style={{ textAlign: "center", padding: "4rem 2rem", opacity: 0.7 }}>
             <MessageCircle size={40} style={{ margin: "0 auto 1rem", color: "var(--text3)" }} />
-            <p>No active chats yet. Go match with real people!</p>
+            <p>No active chats yet. Go connect with a random person!</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {recentChats.map(chat => {
-              const partnerName = chat.user ? (chat.user.isAnonymous ? chat.user.username : (chat.user.realName || chat.user.username)) : "Offline User";
-              const partnerEmoji = chat.user ? chat.user.emoji : "👤";
-              const partnerColor = chat.user ? chat.user.color : "#666";
-              const partnerAvatar = chat.user?.avatarUrl;
+              const partnerName = chat.user ? chat.user.username : "Offline User";
+              const partnerGender = chat.user?.gender;
+              
+              const isMale = partnerGender === 'male';
+              const partnerEmoji = isMale ? '👨' : '👩';
+              const partnerColor = isMale ? '#60a5fa' : '#f472b6';
+              const bgStr = isMale ? 'rgba(59, 130, 246, 0.2)' : 'rgba(236, 72, 153, 0.2)';
+              const borderStr = isMale ? 'rgba(59, 130, 246, 0.4)' : 'rgba(236, 72, 153, 0.4)';
               
               return (
                 <div key={chat.partnerId} onClick={() => chat.user ? router.push(`/chat/${chat.partnerId}`) : null}
                   className="glass card-hover" style={{ padding: "1rem", borderRadius: 16, display: "flex", alignItems: "center", gap: 12, cursor: chat.user ? "pointer" : "default", opacity: chat.user ? 1 : 0.6 }}>
                   
-                  {partnerAvatar && chat.user && !chat.user.isAnonymous ? (
-                    <img src={partnerAvatar} alt="avatar" style={{ width: 48, height: 48, borderRadius: 14, objectFit: "cover", border: `1.5px solid ${partnerColor}44` }} />
-                  ) : (
-                    <div style={{ width: 48, height: 48, borderRadius: 14, fontSize: "1.6rem", display: "flex", alignItems: "center", justifyContent: "center", background: `${partnerColor}18`, border: `1.5px solid ${partnerColor}44` }}>
-                      {partnerEmoji}
-                    </div>
-                  )}
+                  <div style={{ width: 48, height: 48, borderRadius: 14, fontSize: "1.6rem", display: "flex", alignItems: "center", justifyContent: "center", background: bgStr, border: `1.5px solid ${borderStr}` }}>
+                    {partnerEmoji}
+                  </div>
                   
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontWeight: 700, fontSize: "0.95rem", color: partnerColor, marginBottom: 2 }}>{partnerName}</p>

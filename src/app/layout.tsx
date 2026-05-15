@@ -8,12 +8,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Veil — Anonymous Campus Social",
-  description: "The anonymous social platform for DCE students. Meet, vibe, and confess — no strings attached.",
-  keywords: ["anonymous", "campus", "DCE", "Dronacharya", "social", "chat", "confessions"],
+  title: "Veil — Real-Name Campus Chat",
+  description: "The premier real-name social platform for students. Meet and chat with real people — no strings attached.",
+  keywords: ["campus", "social", "chat", "real", "students"],
   openGraph: {
-    title: "Veil — Anonymous Campus Social",
-    description: "Meet, vibe, and confess anonymously at DCE.",
+    title: "Veil — Real-Name Campus Chat",
+    description: "Meet and chat with real people at your campus.",
     type: "website",
   },
 };

@@ -8,12 +8,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Veil — Real-Name Campus Chat",
-  description: "The premier real-name social platform for students. Meet and chat with real people — no strings attached.",
-  keywords: ["campus", "social", "chat", "real", "students"],
+  title: "Veil — Anonymous Chat",
+  description: "Talk to strangers anonymously. No accounts, no profiles, no swiping.",
+  keywords: ["anonymous", "chat", "stranger", "omegle", "alternative"],
   openGraph: {
-    title: "Veil — Real-Name Campus Chat",
-    description: "Meet and chat with real people at your campus.",
+    title: "Veil — Anonymous Chat",
+    description: "Talk to strangers anonymously. No accounts, no profiles, no swiping.",
     type: "website",
   },
 };

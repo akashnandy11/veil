@@ -1,10 +1,12 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors");
 
 const app = express();
+
 app.use(cors());
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -14,93 +16,92 @@ const io = new Server(server, {
   }
 });
 
-// Store active users: socket.id -> User Object
-const activeUsers = new Map();
-// Users waiting to be matched: socket.id -> User Object
-const waitingQueue = new Map();
-// Active chats: socket.id -> partner socket.id
-const activeChats = new Map();
+// REAL waiting queue
+const waitingUsers = [];
 
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+io.on("connection", (socket) => {
+  console.log("Connected:", socket.id);
 
-  socket.on('register', (user) => {
-    activeUsers.set(socket.id, { ...user, socketId: socket.id });
-    io.emit('users_update', Array.from(activeUsers.values()).length);
-  });
+  socket.on("find-partner", () => {
+    console.log("Looking for partner:", socket.id);
 
-  socket.on('join_queue', () => {
-    const user = activeUsers.get(socket.id);
-    if (!user) return;
+    // Prevent duplicate queue entries
+    const alreadyWaiting = waitingUsers.find(
+      user => user.id === socket.id
+    );
 
-    console.log(`User ${user.username} (${user.gender}) joined queue`);
-    
-    // Check if there is an opposite gender waiting
-    let matchFound = false;
-    for (const [waitingId, waitingUser] of waitingQueue.entries()) {
-      if (waitingUser.gender !== user.gender) {
-        // Match found!
-        matchFound = true;
-        waitingQueue.delete(waitingId);
-        
-        // Link them
-        activeChats.set(socket.id, waitingId);
-        activeChats.set(waitingId, socket.id);
-        
-        // Create a unique room
-        const roomId = `room_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-        socket.join(roomId);
-        io.sockets.sockets.get(waitingId)?.join(roomId);
-        
-        // Notify both
-        socket.emit('chat_started', { partner: waitingUser, roomId });
-        io.to(waitingId).emit('chat_started', { partner: user, roomId });
-        
-        console.log(`Matched ${user.username} with ${waitingUser.username}`);
-        break;
-      }
+    if (alreadyWaiting) return;
+
+    // If someone waiting → connect instantly
+    if (waitingUsers.length > 0) {
+      const partner = waitingUsers.shift();
+
+      const roomId = `room-${socket.id}-${partner.id}`;
+
+      socket.join(roomId);
+      partner.socket.join(roomId);
+
+      socket.emit("matched", {
+        roomId,
+        stranger: true
+      });
+
+      partner.socket.emit("matched", {
+        roomId,
+        stranger: true
+      });
+
+      console.log("Matched:", socket.id, partner.id);
     }
+    else {
+      // Nobody online → wait
+      waitingUsers.push({
+        id: socket.id,
+        socket
+      });
 
-    if (!matchFound) {
-      waitingQueue.set(socket.id, user);
-      socket.emit('queue_status', { status: 'waiting' });
+      socket.emit("waiting");
+
+      console.log("Waiting:", socket.id);
     }
   });
 
-  socket.on('leave_queue', () => {
-    waitingQueue.delete(socket.id);
+  // Chat messages
+  socket.on("send-message", ({ roomId, message }) => {
+    socket.to(roomId).emit("receive-message", {
+      message
+    });
   });
 
-  socket.on('send_message', (data) => {
-    // data: { roomId: string, message: object }
-    if (data.roomId) {
-      socket.to(data.roomId).emit('receive_message', data.message);
-    }
+  // Next stranger
+  socket.on("next", () => {
+    removeUser(socket.id);
+    socket.emit("disconnected-stranger");
   });
 
-  socket.on('leave_chat', () => {
-    handleDisconnect(socket);
+  // Disconnect cleanup
+  socket.on("disconnect", () => {
+    removeUser(socket.id);
+    console.log("Disconnected:", socket.id);
   });
 
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-    handleDisconnect(socket);
-    activeUsers.delete(socket.id);
-    waitingQueue.delete(socket.id);
-    io.emit('users_update', Array.from(activeUsers.values()).length);
-  });
+  function removeUser(id) {
+    const index = waitingUsers.findIndex(
+      user => user.id === id
+    );
 
-  function handleDisconnect(socket) {
-    const partnerId = activeChats.get(socket.id);
-    if (partnerId) {
-      activeChats.delete(socket.id);
-      activeChats.delete(partnerId);
-      io.to(partnerId).emit('partner_disconnected');
+    if (index !== -1) {
+      waitingUsers.splice(index, 1);
     }
   }
 });
 
-const PORT = process.env.PORT || 3031;
+app.get("/", (req, res) => {
+  res.send("Socket server running");
+});
+
+const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, () => {
-  console.log(`Socket.IO Server running on port ${PORT}`);
+  console.log(`Server running on ${PORT}`);
 });

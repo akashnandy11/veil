@@ -13,7 +13,7 @@ export default function SocketProvider({ children }: { children: React.ReactNode
 
   useEffect(() => {
     if (!socket) {
-      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "https://veil-1usj.onrender.com";
       socket = io(socketUrl, {
         extraHeaders: {
           "Bypass-Tunnel-Reminder": "true"

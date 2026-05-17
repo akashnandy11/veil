@@ -3,13 +3,14 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { getSocket } from "@/components/SocketProvider";
-import { Send, Shuffle, Loader2, MessageCircle, ArrowRight } from "lucide-react";
+import { Send, Shuffle, Loader2, MessageCircle, ArrowRight, Check } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function App() {
   const { status, messages, addMessage, resetChat, roomId, myGender, setMyGender } = useAppStore();
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState("");
+  const [isDce, setIsDce] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,6 +26,10 @@ export default function App() {
   const connectToStranger = () => {
     if (!myGender) {
       toast.error("Please select your gender first!");
+      return;
+    }
+    if (!isDce) {
+      toast.error("You must be a student at DCE to use this platform.");
       return;
     }
 
@@ -63,7 +68,7 @@ export default function App() {
       {/* Header */}
       <header style={{ padding: "1rem 0", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid var(--border)", marginBottom: "1rem" }}>
         <MessageCircle size={24} color="#a855f7" />
-        <h1 style={{ fontSize: "1.2rem", fontWeight: 800, fontFamily: "Space Grotesk, sans-serif" }}>Anonymous Relay</h1>
+        <h1 style={{ fontSize: "1.2rem", fontWeight: 800, fontFamily: "Space Grotesk, sans-serif" }}>DCE Anonymous Relay</h1>
       </header>
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}>
@@ -74,22 +79,30 @@ export default function App() {
             <motion.div key="idle" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
               style={{ textAlign: "center" }}>
               <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🤫</div>
-              <h2 style={{ fontSize: "2rem", fontWeight: 800, marginBottom: "1rem" }}>Instant Chat</h2>
+              <h2 style={{ fontSize: "2rem", fontWeight: 800, marginBottom: "0.5rem" }}>DCE Instant Chat</h2>
               <p style={{ color: "var(--text2)", marginBottom: "2rem", fontSize: "1rem", lineHeight: 1.6 }}>
-                Talk to strangers anonymously. Select your gender below to be paired with the opposite gender.
+                Talk to DCE students anonymously. Select your gender below to be paired with the opposite gender.
               </p>
               
-              <div style={{ display: "flex", gap: 10, marginBottom: "2rem", justifyContent: "center" }}>
+              <div style={{ display: "flex", gap: 10, marginBottom: "1.5rem", justifyContent: "center" }}>
                 <button onClick={() => setMyGender("male")} className="glass"
-                  style={{ flex: 1, padding: "1rem", borderRadius: 16, border: myGender === "male" ? "2px solid #60a5fa" : "2px solid transparent", background: myGender === "male" ? "rgba(59, 130, 246, 0.15)" : "var(--glass)" }}>
+                  style={{ flex: 1, padding: "1rem", borderRadius: 16, border: myGender === "male" ? "2px solid #60a5fa" : "2px solid transparent", background: myGender === "male" ? "rgba(59, 130, 246, 0.15)" : "var(--glass)", transition: "all 0.2s" }}>
                   <div style={{ fontSize: "2rem", marginBottom: 8 }}>👨</div>
                   <div style={{ fontWeight: 600, color: myGender === "male" ? "#60a5fa" : "inherit" }}>I am Male</div>
                 </button>
                 <button onClick={() => setMyGender("female")} className="glass"
-                  style={{ flex: 1, padding: "1rem", borderRadius: 16, border: myGender === "female" ? "2px solid #f472b6" : "2px solid transparent", background: myGender === "female" ? "rgba(236, 72, 153, 0.15)" : "var(--glass)" }}>
+                  style={{ flex: 1, padding: "1rem", borderRadius: 16, border: myGender === "female" ? "2px solid #f472b6" : "2px solid transparent", background: myGender === "female" ? "rgba(236, 72, 153, 0.15)" : "var(--glass)", transition: "all 0.2s" }}>
                   <div style={{ fontSize: "2rem", marginBottom: 8 }}>👩</div>
                   <div style={{ fontWeight: 600, color: myGender === "female" ? "#f472b6" : "inherit" }}>I am Female</div>
                 </button>
+              </div>
+
+              {/* College Checkbox */}
+              <div onClick={() => setIsDce(!isDce)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "1rem", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)", marginBottom: "2rem", cursor: "pointer", userSelect: "none" }}>
+                <div style={{ width: 24, height: 24, borderRadius: 6, border: isDce ? "none" : "2px solid var(--border)", background: isDce ? "#10b981" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {isDce && <Check size={16} color="white" strokeWidth={3} />}
+                </div>
+                <span style={{ fontSize: "0.95rem", fontWeight: 600, color: isDce ? "white" : "var(--text2)" }}>I confirm I am a student at DCE</span>
               </div>
               
               <button onClick={connectToStranger} className="btn-primary" 
@@ -105,7 +118,7 @@ export default function App() {
               style={{ textAlign: "center" }}>
               <Loader2 size={40} className="spin" color="#a855f7" style={{ margin: "0 auto 2rem" }} />
               <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.5rem" }}>Searching...</h2>
-              <p style={{ color: "var(--text3)" }}>Looking for a stranger of the opposite gender.</p>
+              <p style={{ color: "var(--text3)" }}>Looking for a DCE stranger of the opposite gender.</p>
             </motion.div>
           )}
 

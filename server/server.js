@@ -22,8 +22,10 @@ const waitingUsers = [];
 io.on("connection", (socket) => {
   console.log("Connected:", socket.id);
 
-  socket.on("find-partner", () => {
-    console.log("Looking for partner:", socket.id);
+  socket.on("find-partner", (data) => {
+    console.log("Looking for partner:", socket.id, "Gender:", data?.gender);
+
+    const userGender = data?.gender || 'unknown';
 
     // Prevent duplicate queue entries
     const alreadyWaiting = waitingUsers.find(
@@ -32,9 +34,12 @@ io.on("connection", (socket) => {
 
     if (alreadyWaiting) return;
 
-    // If someone waiting → connect instantly
-    if (waitingUsers.length > 0) {
-      const partner = waitingUsers.shift();
+    // Look for an opposite gender partner in the queue
+    const partnerIndex = waitingUsers.findIndex(u => u.gender !== userGender && u.gender !== 'unknown' && userGender !== 'unknown');
+
+    if (partnerIndex !== -1) {
+      // Found opposite gender partner
+      const partner = waitingUsers.splice(partnerIndex, 1)[0];
 
       const roomId = `room-${socket.id}-${partner.id}`;
 
@@ -54,10 +59,11 @@ io.on("connection", (socket) => {
       console.log("Matched:", socket.id, partner.id);
     }
     else {
-      // Nobody online → wait
+      // Nobody of opposite gender online → wait
       waitingUsers.push({
         id: socket.id,
-        socket
+        socket,
+        gender: userGender
       });
 
       socket.emit("waiting");

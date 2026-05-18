@@ -46,7 +46,7 @@ export default function AdminDashboard() {
   }, [session, status, router]);
 
   useEffect(() => {
-    fetchUsers();
+    fetchSessions();
   }, []);
 
   const fetchSessions = async () => {

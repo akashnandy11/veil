@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { getSocket } from "@/components/SocketProvider";
-import { Send, Shuffle, Loader2, MessageCircle, ArrowRight, LogIn, LogOut, Smile, UserCircle, Shield } from "lucide-react";
+import { Send, Shuffle, Loader2, MessageCircle, ArrowRight, LogIn, LogOut, Smile, UserCircle, Shield, Image as ImageIcon } from "lucide-react";
 import toast from "react-hot-toast";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -17,9 +17,11 @@ export default function App() {
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const emojiRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [guestForm, setGuestForm] = useState({ name: "", age: "", gender: "male", interests: "" });
 
@@ -84,6 +86,45 @@ export default function App() {
     addMessage({ id: Math.random().toString(), text: input.trim(), mine: true, timestamp: new Date() });
     setInput("");
     setShowEmoji(false);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || status !== "matched") return;
+    
+    // Check file size (max 5MB before compression)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be smaller than 5MB");
+      return;
+    }
+
+    setUploadingImage(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Compress image using canvas
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 800;
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Convert to base64 jpeg
+        const base64Image = canvas.toDataURL("image/jpeg", 0.7);
+        
+        const socket = getSocket();
+        socket?.emit("send-message", { roomId, imageUrl: base64Image });
+        addMessage({ id: Math.random().toString(), imageUrl: base64Image, mine: true, timestamp: new Date() });
+        setUploadingImage(false);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const insertEmoji = (emoji: string) => {
@@ -202,8 +243,12 @@ export default function App() {
                 )}
                 {messages.map((msg) => (
                   <div key={msg.id} style={{ display: "flex", justifyContent: msg.mine ? "flex-end" : "flex-start" }}>
-                    <div className={msg.mine ? "bubble-sent" : "bubble-recv"} style={{ maxWidth: "75%" }}>
-                      {msg.text}
+                    <div className={msg.mine ? "bubble-sent" : "bubble-recv"} style={{ maxWidth: "75%", padding: msg.imageUrl ? "8px" : undefined }}>
+                      {msg.imageUrl ? (
+                        <img src={msg.imageUrl} alt="Shared image" style={{ width: "100%", borderRadius: 12, display: "block" }} />
+                      ) : (
+                        msg.text
+                      )}
                     </div>
                   </div>
                 ))}
@@ -245,6 +290,11 @@ export default function App() {
                 <button onClick={() => setShowEmoji((p) => !p)} className="btn-ghost" style={{ padding: "0 0.75rem", borderRadius: 12, color: showEmoji ? "#a855f7" : "var(--text2)" }}>
                   <Smile size={20} />
                 </button>
+                <button onClick={() => fileInputRef.current?.click()} disabled={uploadingImage} className="btn-ghost" style={{ padding: "0 0.75rem", borderRadius: 12, color: "var(--text2)" }}>
+                  {uploadingImage ? <Loader2 size={20} className="spin" /> : <ImageIcon size={20} />}
+                </button>
+                <input type="file" accept="image/*,image/gif" ref={fileInputRef} onChange={handleImageUpload} style={{ display: "none" }} />
+                
                 <input
                   value={input}
                   onChange={(e) => { setInput(e.target.value); emitTyping(); }}

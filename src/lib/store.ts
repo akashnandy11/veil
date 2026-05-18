@@ -2,7 +2,8 @@ import { create } from "zustand";
 
 export interface Message {
   id: string;
-  text: string;
+  text?: string;
+  imageUrl?: string;
   mine: boolean;
   timestamp: Date;
 }

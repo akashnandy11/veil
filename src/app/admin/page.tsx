@@ -9,7 +9,8 @@ import toast from "react-hot-toast";
 
 interface Message {
   senderId: string;
-  text: string;
+  text?: string;
+  imageUrl?: string;
   timestamp: string;
 }
 
@@ -186,8 +187,12 @@ export default function AdminDashboard() {
                   return (
                     <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: isUser1 ? "flex-start" : "flex-end" }}>
                       <span style={{ fontSize: "0.7rem", color: "var(--text3)", marginBottom: 2, padding: "0 4px" }}>{senderName} • {new Date(msg.timestamp).toLocaleTimeString()}</span>
-                      <div className={isUser1 ? "bubble-recv" : "bubble-sent"} style={{ maxWidth: "80%", padding: "8px 14px" }}>
-                        {msg.text}
+                      <div className={isUser1 ? "bubble-recv" : "bubble-sent"} style={{ maxWidth: "80%", padding: msg.imageUrl ? "8px" : "8px 14px" }}>
+                        {msg.imageUrl ? (
+                          <img src={msg.imageUrl} alt="Shared image" style={{ width: "100%", borderRadius: 12, display: "block" }} />
+                        ) : (
+                          msg.text
+                        )}
                       </div>
                     </div>
                   );

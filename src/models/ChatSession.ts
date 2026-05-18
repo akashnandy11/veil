@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 const MessageSchema = new mongoose.Schema(
   {
     senderId: { type: String, required: true }, // The socket ID or pseudo-ID of the sender
-    text: { type: String, required: true },
+    text: { type: String, required: false },
+    imageUrl: { type: String, required: false },
     timestamp: { type: Date, default: Date.now },
   },
   { _id: false }

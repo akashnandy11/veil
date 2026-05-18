@@ -30,7 +30,8 @@ if (MONGODB_URI) {
 // Inline ChatSession schema for the Node server
 const MessageSchema = new mongoose.Schema({
   senderId: { type: String, required: true },
-  text: { type: String, required: true },
+  text: { type: String, required: false },
+  imageUrl: { type: String, required: false },
   timestamp: { type: Date, default: Date.now },
 }, { _id: false });
 
@@ -119,15 +120,16 @@ io.on("connection", (socket) => {
   });
 
   // Chat messages
-  socket.on("send-message", ({ roomId, message }) => {
+  socket.on("send-message", ({ roomId, message, imageUrl }) => {
     socket.to(roomId).emit("receive-message", {
-      message
+      message,
+      imageUrl
     });
     
     if (MONGODB_URI) {
       ChatSession.updateOne(
         { roomId },
-        { $push: { messages: { senderId: socket.id, text: message, timestamp: new Date() } } }
+        { $push: { messages: { senderId: socket.id, text: message || "", imageUrl, timestamp: new Date() } } }
       ).catch(err => console.error("Error saving message:", err));
     }
   });

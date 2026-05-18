@@ -9,7 +9,7 @@ let socket: Socket | null = null;
 export const getSocket = () => socket;
 
 export default function SocketProvider({ children }: { children: React.ReactNode }) {
-  const { setStatus, setRoomId, addMessage, clearMessages, resetChat, setPartnerTyping, setOnlineCount } = useAppStore();
+  const { setStatus, setRoomId, addMessage, clearMessages, resetChat, setPartnerTyping, setOnlineCount, setPartnerDisconnected } = useAppStore();
 
   useEffect(() => {
     if (!socket) {
@@ -32,6 +32,7 @@ export default function SocketProvider({ children }: { children: React.ReactNode
     socket.on("matched", ({ roomId }) => {
       setRoomId(roomId);
       setStatus("matched");
+      setPartnerDisconnected(false);
       clearMessages();
     });
 
@@ -53,8 +54,15 @@ export default function SocketProvider({ children }: { children: React.ReactNode
     });
 
     socket.on("disconnected-stranger", () => {
-      toast.error("Stranger disconnected.");
-      resetChat();
+      setPartnerTyping(false);
+      setPartnerDisconnected(true);
+      addMessage({
+        id: Math.random().toString(),
+        text: "Stranger has disconnected. Click Next to find a new partner.",
+        mine: false,
+        isSystem: true,
+        timestamp: new Date()
+      });
     });
 
     socket.on("online-count", (count: number) => {
@@ -65,7 +73,7 @@ export default function SocketProvider({ children }: { children: React.ReactNode
       socket?.disconnect();
       socket = null;
     };
-  }, [setStatus, setRoomId, addMessage, clearMessages, resetChat]);
+  }, [setStatus, setRoomId, addMessage, clearMessages, resetChat, setPartnerTyping, setOnlineCount, setPartnerDisconnected]);
 
   return <>{children}</>;
 }

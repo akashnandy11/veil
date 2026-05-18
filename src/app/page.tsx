@@ -13,7 +13,7 @@ const EMOJIS = ["😂","❤️","🔥","👀","😭","✨","😍","🥺","💀",
 export default function App() {
   const { data: session } = useSession();
   const router = useRouter();
-  const { status, messages, addMessage, resetChat, roomId, partnerTyping, onlineCount } = useAppStore();
+  const { status, messages, addMessage, resetChat, roomId, partnerTyping, partnerDisconnected, onlineCount } = useAppStore();
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
@@ -242,14 +242,20 @@ export default function App() {
                   </p>
                 )}
                 {messages.map((msg) => (
-                  <div key={msg.id} style={{ display: "flex", justifyContent: msg.mine ? "flex-end" : "flex-start" }}>
-                    <div className={msg.mine ? "bubble-sent" : "bubble-recv"} style={{ maxWidth: "75%", padding: msg.imageUrl ? "8px" : undefined }}>
-                      {msg.imageUrl ? (
-                        <img src={msg.imageUrl} alt="Shared image" style={{ width: "100%", borderRadius: 12, display: "block" }} />
-                      ) : (
-                        msg.text
-                      )}
-                    </div>
+                  <div key={msg.id} style={{ display: "flex", justifyContent: msg.isSystem ? "center" : (msg.mine ? "flex-end" : "flex-start") }}>
+                    {msg.isSystem ? (
+                      <div style={{ fontSize: "0.75rem", color: "var(--text3)", background: "rgba(255,255,255,0.05)", padding: "4px 12px", borderRadius: 16, margin: "8px 0" }}>
+                        {msg.text}
+                      </div>
+                    ) : (
+                      <div className={msg.mine ? "bubble-sent" : "bubble-recv"} style={{ maxWidth: "75%", padding: msg.imageUrl ? "8px" : undefined }}>
+                        {msg.imageUrl ? (
+                          <img src={msg.imageUrl} alt="Shared image" style={{ width: "100%", borderRadius: 12, display: "block" }} />
+                        ) : (
+                          msg.text
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
 
@@ -286,7 +292,7 @@ export default function App() {
               </AnimatePresence>
 
               {/* Input Area */}
-              <div style={{ display: "flex", gap: 8, paddingTop: 6 }}>
+              <div style={{ display: "flex", gap: 8, paddingTop: 6, opacity: partnerDisconnected ? 0.5 : 1, pointerEvents: partnerDisconnected ? "none" : "auto" }}>
                 <button onClick={() => setShowEmoji((p) => !p)} className="btn-ghost" style={{ padding: "0 0.75rem", borderRadius: 12, color: showEmoji ? "#a855f7" : "var(--text2)" }}>
                   <Smile size={20} />
                 </button>
@@ -299,11 +305,12 @@ export default function App() {
                   value={input}
                   onChange={(e) => { setInput(e.target.value); emitTyping(); }}
                   onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                  placeholder="Type a message..."
+                  placeholder={partnerDisconnected ? "Stranger left the chat..." : "Type a message..."}
                   className="input-glass"
                   style={{ flex: 1 }}
+                  disabled={partnerDisconnected}
                 />
-                <button onClick={sendMessage} className="btn-primary" style={{ padding: "0 1rem", borderRadius: 12 }}>
+                <button onClick={sendMessage} disabled={partnerDisconnected} className="btn-primary" style={{ padding: "0 1rem", borderRadius: 12 }}>
                   <Send size={18} />
                 </button>
               </div>

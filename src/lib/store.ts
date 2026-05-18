@@ -5,6 +5,7 @@ export interface Message {
   text?: string;
   imageUrl?: string;
   mine: boolean;
+  isSystem?: boolean;
   timestamp: Date;
 }
 
@@ -13,11 +14,13 @@ interface AppState {
   roomId: string | null;
   messages: Message[];
   partnerTyping: boolean;
+  partnerDisconnected: boolean;
   onlineCount: number;
   
   setStatus: (status: "idle" | "waiting" | "matched") => void;
   setRoomId: (id: string | null) => void;
   setPartnerTyping: (val: boolean) => void;
+  setPartnerDisconnected: (val: boolean) => void;
   setOnlineCount: (count: number) => void;
   addMessage: (msg: Message) => void;
   clearMessages: () => void;
@@ -29,13 +32,15 @@ export const useAppStore = create<AppState>((set) => ({
   roomId: null,
   messages: [],
   partnerTyping: false,
+  partnerDisconnected: false,
   onlineCount: 0,
 
   setStatus: (status) => set({ status }),
   setRoomId: (roomId) => set({ roomId }),
   setPartnerTyping: (val) => set({ partnerTyping: val }),
+  setPartnerDisconnected: (val) => set({ partnerDisconnected: val }),
   setOnlineCount: (count) => set({ onlineCount: count }),
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
   clearMessages: () => set({ messages: [] }),
-  resetChat: () => set({ status: "idle", roomId: null, messages: [], partnerTyping: false })
+  resetChat: () => set({ status: "idle", roomId: null, messages: [], partnerTyping: false, partnerDisconnected: false })
 }));

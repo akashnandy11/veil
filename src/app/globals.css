@@ -168,6 +168,19 @@ body {
   66% { transform: translate(-20px, 20px) scale(0.95); }
 }
 
+/* Spin animation (for loaders) */
+.spin {
+  animation: spin 1s linear infinite;
+  display: block;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* orb-4 */
+.orb-4 { width: 250px; height: 250px; background: #6366f1; top: 30%; right: 10%; animation-delay: -2s; opacity: 0.1; }
+
 /* Chat bubble */
 .bubble-sent {
   background: linear-gradient(135deg, #a855f7, #ec4899);

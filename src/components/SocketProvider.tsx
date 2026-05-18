@@ -9,7 +9,7 @@ let socket: Socket | null = null;
 export const getSocket = () => socket;
 
 export default function SocketProvider({ children }: { children: React.ReactNode }) {
-  const { setStatus, setRoomId, addMessage, clearMessages, resetChat } = useAppStore();
+  const { setStatus, setRoomId, addMessage, clearMessages, resetChat, setPartnerTyping, setOnlineCount } = useAppStore();
 
   useEffect(() => {
     if (!socket) {
@@ -44,9 +44,21 @@ export default function SocketProvider({ children }: { children: React.ReactNode
       });
     });
 
+    socket.on("partner-typing", () => {
+      setPartnerTyping(true);
+    });
+
+    socket.on("partner-stop-typing", () => {
+      setPartnerTyping(false);
+    });
+
     socket.on("disconnected-stranger", () => {
       toast.error("Stranger disconnected.");
       resetChat();
+    });
+
+    socket.on("online-count", (count: number) => {
+      setOnlineCount(count);
     });
 
     return () => {

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
-import SocketProvider from "@/components/SocketProvider";
+import Providers from "@/components/Providers";
 
 export const viewport: Viewport = {
   themeColor: "#a855f7",
@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <SocketProvider>
+        <Providers>
           {/* Background orbs */}
           <div className="orb orb-1" aria-hidden />
           <div className="orb orb-2" aria-hidden />
@@ -47,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               }
             }}
           />
-        </SocketProvider>
+        </Providers>
       </body>
     </html>
   );

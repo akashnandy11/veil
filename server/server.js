@@ -22,6 +22,9 @@ const waitingUsers = [];
 io.on("connection", (socket) => {
   console.log("Connected:", socket.id);
 
+  // Broadcast updated count to everyone
+  io.emit("online-count", io.engine.clientsCount);
+
   socket.on("find-partner", (data) => {
     console.log("Looking for partner:", socket.id, "Gender:", data?.gender);
 
@@ -79,16 +82,39 @@ io.on("connection", (socket) => {
     });
   });
 
+  // Typing indicator
+  socket.on("typing", ({ roomId }) => {
+    socket.to(roomId).emit("partner-typing");
+  });
+
+  socket.on("stop-typing", ({ roomId }) => {
+    socket.to(roomId).emit("partner-stop-typing");
+  });
+
   // Next stranger
   socket.on("next", () => {
+    // Notify the partner in the room before leaving
+    socket.rooms.forEach((room) => {
+      if (room !== socket.id) {
+        socket.to(room).emit("disconnected-stranger");
+        socket.leave(room);
+      }
+    });
     removeUser(socket.id);
-    socket.emit("disconnected-stranger");
   });
 
   // Disconnect cleanup
   socket.on("disconnect", () => {
+    // Notify partner in any active room
+    socket.rooms.forEach((room) => {
+      if (room !== socket.id) {
+        socket.to(room).emit("disconnected-stranger");
+      }
+    });
     removeUser(socket.id);
     console.log("Disconnected:", socket.id);
+    // Broadcast updated count
+    io.emit("online-count", io.engine.clientsCount);
   });
 
   function removeUser(id) {

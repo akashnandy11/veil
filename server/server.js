@@ -2,6 +2,8 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
+const mongoose = require("mongoose");
+require("dotenv").config({ path: "../.env.local" }); // Load from Next.js root if running locally
 
 const app = express();
 
@@ -19,6 +21,35 @@ const io = new Server(server, {
 // REAL waiting queue
 const waitingUsers = [];
 
+// Mongoose Setup
+const MONGODB_URI = process.env.MONGODB_URI;
+if (MONGODB_URI) {
+  mongoose.connect(MONGODB_URI).then(() => console.log("Socket server connected to MongoDB")).catch(err => console.error("MongoDB connection error:", err));
+}
+
+// Inline ChatSession schema for the Node server
+const MessageSchema = new mongoose.Schema({
+  senderId: { type: String, required: true },
+  text: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+}, { _id: false });
+
+const ChatSessionSchema = new mongoose.Schema({
+  roomId: { type: String, required: true, unique: true },
+  status: { type: String, enum: ["active", "ended"], default: "active" },
+  user1: {
+    name: String, gender: String, age: Number, interests: [String], socketId: String
+  },
+  user2: {
+    name: String, gender: String, age: Number, interests: [String], socketId: String
+  },
+  messages: [MessageSchema],
+  startedAt: { type: Date, default: Date.now },
+  endedAt: Date,
+}, { timestamps: true });
+
+const ChatSession = mongoose.models.ChatSession || mongoose.model("ChatSession", ChatSessionSchema);
+
 io.on("connection", (socket) => {
   console.log("Connected:", socket.id);
 
@@ -26,9 +57,10 @@ io.on("connection", (socket) => {
   io.emit("online-count", io.engine.clientsCount);
 
   socket.on("find-partner", (data) => {
-    console.log("Looking for partner:", socket.id, "Gender:", data?.gender);
+    console.log("Looking for partner:", socket.id, "Data:", data);
 
     const userGender = data?.gender || 'unknown';
+    const guestDetails = data || {};
 
     // Prevent duplicate queue entries
     const alreadyWaiting = waitingUsers.find(
@@ -49,6 +81,16 @@ io.on("connection", (socket) => {
       socket.join(roomId);
       partner.socket.join(roomId);
 
+      // Save session to MongoDB
+      if (MONGODB_URI) {
+        ChatSession.create({
+          roomId,
+          status: "active",
+          user1: { ...guestDetails, socketId: socket.id },
+          user2: { ...partner.guestDetails, socketId: partner.id },
+        }).catch(err => console.error("Error creating chat session:", err));
+      }
+
       socket.emit("matched", {
         roomId,
         stranger: true
@@ -66,7 +108,8 @@ io.on("connection", (socket) => {
       waitingUsers.push({
         id: socket.id,
         socket,
-        gender: userGender
+        gender: userGender,
+        guestDetails
       });
 
       socket.emit("waiting");
@@ -80,6 +123,13 @@ io.on("connection", (socket) => {
     socket.to(roomId).emit("receive-message", {
       message
     });
+    
+    if (MONGODB_URI) {
+      ChatSession.updateOne(
+        { roomId },
+        { $push: { messages: { senderId: socket.id, text: message, timestamp: new Date() } } }
+      ).catch(err => console.error("Error saving message:", err));
+    }
   });
 
   // Typing indicator
@@ -109,6 +159,9 @@ io.on("connection", (socket) => {
     socket.rooms.forEach((room) => {
       if (room !== socket.id) {
         socket.to(room).emit("disconnected-stranger");
+        if (MONGODB_URI) {
+          ChatSession.updateOne({ roomId: room }, { status: "ended", endedAt: new Date() }).catch(err => {});
+        }
       }
     });
     removeUser(socket.id);

@@ -21,6 +21,8 @@ export default function App() {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const emojiRef = useRef<HTMLDivElement>(null);
 
+  const [guestForm, setGuestForm] = useState({ name: "", age: "", gender: "male", interests: "" });
+
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
@@ -50,11 +52,20 @@ export default function App() {
   }, [roomId]);
 
   const connectToStranger = () => {
-    if (!session?.user) { toast.error("Please log in to connect."); return; }
-    const userGender = (session.user as any).gender;
-    if (!userGender) { toast.error("Please complete your profile with your gender."); return; }
+    if (!guestForm.name || !guestForm.age || !guestForm.gender) {
+      toast.error("Please fill in Name, Age, and Gender to connect.");
+      return;
+    }
+    
+    const guestDetails = {
+      name: guestForm.name,
+      age: parseInt(guestForm.age),
+      gender: guestForm.gender,
+      interests: guestForm.interests.split(",").map(i => i.trim()).filter(Boolean)
+    };
+
     const socket = getSocket();
-    socket?.emit("find-partner", { gender: userGender });
+    socket?.emit("find-partner", guestDetails);
   };
 
   const nextStranger = () => {
@@ -95,20 +106,19 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {session?.user && (session.user as any).role === "admin" && (
-            <button onClick={() => router.push("/admin")} style={{ color: "#ec4899", display: "flex", alignItems: "center", gap: 4, fontSize: "0.8rem", fontWeight: 600 }}>
-              <Shield size={15} /> Admin
-            </button>
-          )}
-          {session?.user && (
+          {session?.user && (session.user as any).role === "admin" ? (
             <>
-              <button onClick={() => router.push("/profile")} style={{ color: "var(--text2)", display: "flex", alignItems: "center", gap: 4, fontSize: "0.8rem", fontWeight: 600 }}>
-                <UserCircle size={15} /> Profile
+              <button onClick={() => router.push("/admin")} style={{ color: "#ec4899", display: "flex", alignItems: "center", gap: 4, fontSize: "0.8rem", fontWeight: 600 }}>
+                <Shield size={15} /> Admin Dashboard
               </button>
               <button onClick={() => signOut()} style={{ color: "var(--text2)", display: "flex", alignItems: "center", gap: 4, fontSize: "0.8rem", fontWeight: 600 }}>
                 <LogOut size={15} /> Logout
               </button>
             </>
+          ) : (
+            <button onClick={() => router.push("/auth/login")} style={{ color: "var(--text3)", display: "flex", alignItems: "center", gap: 4, fontSize: "0.8rem" }}>
+              <Shield size={15} /> Admin Login
+            </button>
           )}
         </div>
       </header>
@@ -118,34 +128,44 @@ export default function App() {
           
           {/* SCREEN 1: IDLE */}
           {status === "idle" && (
-            <motion.div key="idle" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🤫</div>
-              <h2 style={{ fontSize: "2rem", fontWeight: 800, marginBottom: "0.5rem" }}>
-                {session?.user ? `Hi, ${session.user.name}!` : "DCE Anonymous Chat"}
+            <motion.div key="idle" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} style={{ textAlign: "center", width: "100%", maxWidth: 400, margin: "0 auto" }}>
+              <div style={{ fontSize: "4rem", marginBottom: "0.5rem" }}>🤫</div>
+              <h2 style={{ fontSize: "1.8rem", fontWeight: 800, marginBottom: "0.5rem" }}>
+                DCE Anonymous Chat
               </h2>
-              <p style={{ color: "var(--text2)", marginBottom: "2rem", fontSize: "1rem", lineHeight: 1.6 }}>
-                {session?.user
-                  ? "Click below to be instantly matched with a DCE stranger of the opposite gender."
-                  : "Create an account to verify your DCE student status and start chatting anonymously."}
+              <p style={{ color: "var(--text2)", marginBottom: "1.5rem", fontSize: "0.95rem", lineHeight: 1.6 }}>
+                Enter your details to instantly match with a DCE stranger of the opposite gender. No account required!
               </p>
 
-              {session?.user ? (
-                <button onClick={connectToStranger} className="btn-primary"
-                  style={{ width: "100%", padding: "1.2rem", fontSize: "1.1rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 16 }}>
-                  Connect Now <ArrowRight size={20} />
-                </button>
-              ) : (
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => router.push("/auth/login")} className="glass"
-                    style={{ flex: 1, padding: "1.2rem", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 16 }}>
-                    <LogIn size={18} /> Log In
-                  </button>
-                  <button onClick={() => router.push("/auth/signup")} className="btn-primary"
-                    style={{ flex: 1, padding: "1.2rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 16 }}>
-                    Sign Up <ArrowRight size={18} />
-                  </button>
+              <div className="glass" style={{ padding: "1.5rem", borderRadius: 20, textAlign: "left", display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text2)", marginBottom: 4, display: "block" }}>Display Name</label>
+                  <input value={guestForm.name} onChange={(e) => setGuestForm({ ...guestForm, name: e.target.value })} className="input-glass" placeholder="Your anonymous alias" style={{ width: "100%" }} />
                 </div>
-              )}
+                <div style={{ display: "flex", gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text2)", marginBottom: 4, display: "block" }}>Age</label>
+                    <input type="number" value={guestForm.age} onChange={(e) => setGuestForm({ ...guestForm, age: e.target.value })} className="input-glass" placeholder="18" style={{ width: "100%" }} min="13" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text2)", marginBottom: 4, display: "block" }}>Gender</label>
+                    <select value={guestForm.gender} onChange={(e) => setGuestForm({ ...guestForm, gender: e.target.value })} className="input-glass" style={{ width: "100%" }}>
+                      <option value="male" style={{ background: "#0a0a12", color: "white" }}>Male</option>
+                      <option value="female" style={{ background: "#0a0a12", color: "white" }}>Female</option>
+                      <option value="other" style={{ background: "#0a0a12", color: "white" }}>Other</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text2)", marginBottom: 4, display: "block" }}>Interests (optional)</label>
+                  <input value={guestForm.interests} onChange={(e) => setGuestForm({ ...guestForm, interests: e.target.value })} className="input-glass" placeholder="Anime, Coding, Music..." style={{ width: "100%" }} />
+                </div>
+                
+                <button onClick={connectToStranger} className="btn-primary"
+                  style={{ width: "100%", padding: "1rem", marginTop: 8, fontSize: "1rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 12 }}>
+                  Start Chatting <ArrowRight size={18} />
+                </button>
+              </div>
             </motion.div>
           )}
 
@@ -166,7 +186,7 @@ export default function App() {
               {/* Chat Header */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.6rem 0 1rem", borderBottom: "1px solid var(--border)", marginBottom: "0.5rem" }}>
                 <span style={{ fontSize: "0.82rem", color: "#10b981", fontWeight: 600, background: "rgba(16,185,129,0.1)", padding: "4px 12px", borderRadius: 999 }}>
-                  🟢 Connected to a {(session?.user as any)?.gender === "male" ? "female" : "male"} stranger
+                  🟢 Connected to a {guestForm.gender === "male" ? "female" : "male"} stranger
                 </span>
                 <button onClick={nextStranger} className="glass" style={{ padding: "5px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", color: "var(--text2)" }}>
                   <Shuffle size={14} /> Next

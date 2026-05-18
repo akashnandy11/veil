@@ -10,9 +10,6 @@ export default function SignupPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   
   const [formData, setFormData] = useState({
     username: "",
@@ -27,21 +24,8 @@ export default function SignupPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
-    // Auto-focus next
-    if (value && index < 5) {
-      otpRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleNext = () => {
@@ -58,52 +42,26 @@ export default function SignupPage() {
     }
   };
 
-  const handleSendOtp = async () => {
+  const handleSignup = async () => {
     if (!formData.age) {
       toast.error("Please fill all required fields");
       return;
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: formData.email }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      toast.success(`Verification code sent to ${formData.email}!`);
-      setOtpSent(true);
-      setStep(3);
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyAndSignup = async () => {
-    const otpString = otp.join("");
-    if (otpString.length !== 6) {
-      toast.error("Please enter the full 6-digit code");
-      return;
-    }
-    setLoading(true);
-    try {
       const interestsArray = formData.interests.split(",").map((i) => i.trim()).filter(Boolean);
-      const res = await fetch("/api/auth/verify-otp", {
+      const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           age: parseInt(formData.age),
           interests: interestsArray,
-          otp: otpString,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      toast.success("Account created! Please log in.");
+      toast.success("Account created successfully! Please log in.");
       router.push("/auth/login");
     } catch (err: any) {
       toast.error(err.message);
@@ -112,9 +70,9 @@ export default function SignupPage() {
     }
   };
 
-  const stepIcons = [<Users size={24} color="white" />, <Mail size={24} color="white" />, <ShieldCheck size={24} color="white" />];
-  const stepTitles = ["Create Account", "Your Profile", "Verify Email"];
-  const stepDescs = ["Set your username and password", "Tell us a bit about yourself", `Enter the code sent to ${formData.email}`];
+  const stepIcons = [<Users size={24} color="white" />, <ShieldCheck size={24} color="white" />];
+  const stepTitles = ["Create Account", "Your Profile"];
+  const stepDescs = ["Set your username and password", "Tell us a bit about yourself"];
 
   return (
     <main style={{ minHeight: "100vh", padding: "1.25rem", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -122,12 +80,12 @@ export default function SignupPage() {
         
         {/* Step Indicator */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: "2rem" }}>
-          {[1, 2, 3].map((s) => (
+          {[1, 2].map((s) => (
             <div key={s} style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 32, height: 32, borderRadius: "50%", background: step >= s ? "linear-gradient(135deg,#a855f7,#ec4899)" : "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", fontWeight: 700, transition: "all 0.3s" }}>
                 {s}
               </div>
-              {s < 3 && <div style={{ width: 32, height: 2, background: step > s ? "#a855f7" : "rgba(255,255,255,0.1)", transition: "all 0.3s" }} />}
+              {s < 2 && <div style={{ width: 32, height: 2, background: step > s ? "#a855f7" : "rgba(255,255,255,0.1)", transition: "all 0.3s" }} />}
             </div>
           ))}
         </div>
@@ -187,45 +145,8 @@ export default function SignupPage() {
               </div>
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
                 <button type="button" onClick={() => setStep(1)} className="glass" style={{ padding: "1rem 1.5rem", borderRadius: 12, fontWeight: 600 }}>Back</button>
-                <button type="button" onClick={handleSendOtp} disabled={loading} className="btn-primary" style={{ flex: 1, padding: "1rem", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
-                  {loading ? <Loader2 size={18} className="spin" /> : <><Mail size={18} /> Send Verification Code</>}
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP 3 - OTP */}
-          {step === 3 && (
-            <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ display: "flex", flexDirection: "column", gap: 24, alignItems: "center" }}>
-              
-              <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-                {otp.map((digit, i) => (
-                  <input
-                    key={i}
-                    ref={(el) => { otpRefs.current[i] = el; }}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleOtpChange(i, e.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                    className="input-glass"
-                    style={{ width: 52, height: 60, textAlign: "center", fontSize: "1.5rem", fontWeight: 800, padding: 0, borderRadius: 12, border: digit ? "2px solid #a855f7" : "2px solid rgba(255,255,255,0.1)" }}
-                  />
-                ))}
-              </div>
-
-              <p style={{ color: "var(--text3)", fontSize: "0.82rem", textAlign: "center" }}>
-                Didn't receive it?{" "}
-                <button type="button" onClick={handleSendOtp} style={{ color: "#a855f7", fontWeight: 600 }}>
-                  Resend code
-                </button>
-              </p>
-
-              <div style={{ display: "flex", gap: 10, width: "100%" }}>
-                <button type="button" onClick={() => setStep(2)} className="glass" style={{ padding: "1rem 1.5rem", borderRadius: 12, fontWeight: 600 }}>Back</button>
-                <button type="button" onClick={handleVerifyAndSignup} disabled={loading} className="btn-primary" style={{ flex: 1, padding: "1rem", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
-                  {loading ? <Loader2 size={18} className="spin" /> : <><ShieldCheck size={18} /> Verify & Create Account</>}
+                <button type="button" onClick={handleSignup} disabled={loading} className="btn-primary" style={{ flex: 1, padding: "1rem", borderRadius: 12, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
+                  {loading ? <Loader2 size={18} className="spin" /> : <><ShieldCheck size={18} /> Create Account</>}
                 </button>
               </div>
             </motion.div>

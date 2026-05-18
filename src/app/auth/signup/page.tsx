@@ -174,10 +174,10 @@ export default function SignupPage() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text2)", marginBottom: 6, display: "block" }}>Gender</label>
-                  <select name="gender" value={formData.gender} onChange={handleChange} className="input-glass" style={{ width: "100%", appearance: "none" }}>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
+                  <select name="gender" value={formData.gender} onChange={handleChange} className="input-glass" style={{ width: "100%" }}>
+                    <option value="male" style={{ background: "#0a0a12", color: "white" }}>Male</option>
+                    <option value="female" style={{ background: "#0a0a12", color: "white" }}>Female</option>
+                    <option value="other" style={{ background: "#0a0a12", color: "white" }}>Other</option>
                   </select>
                 </div>
               </div>
